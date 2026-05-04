@@ -325,12 +325,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Redux Toolkit](https://redux-toolkit.js.org/)
 - [Radix UI](https://www.radix-ui.com/)
 
-## 📫 Contact
 
-For questions or feedback, please open an issue or contact the maintainers:
-
-- Maintainer - [@Md. Afzal hassan Ehsani](https://github.com/iemafzalhassan)
-- Project Link: [https://github.com/iemafzalhassan/easyshop](https://github.com/iemafzalhassan/easyshop)
 
 ---
 
