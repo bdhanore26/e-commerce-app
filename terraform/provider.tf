@@ -1,5 +1,13 @@
-locals {
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
 
+locals {
   region          = "eu-west-1"
   name            = "tws-eks-cluster"
   vpc_cidr        = "10.0.0.0/16"
@@ -10,11 +18,8 @@ locals {
   tags = {
     example = local.name
   }
-
 }
 
 provider "aws" {
-
   region = local.region
-
 }
