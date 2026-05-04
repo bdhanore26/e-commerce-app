@@ -56,10 +56,23 @@ EasyShop follows a three-tier architecture pattern:
 ### 1. Install Terraform
 * Install Terraform<br/>
 #### Linux & macOS
-```bash
-curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
-sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
-sudo apt-get update && sudo apt-get install terraform
+# 1. Install required packages
+sudo apt-get update
+sudo apt-get install -y gnupg software-properties-common curl
+
+# 2. Add HashiCorp GPG key (NEW method)
+curl -fsSL https://apt.releases.hashicorp.com/gpg | \
+gpg --dearmor | \
+sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+
+# 3. Add repository
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+# 4. Update and install Terraform
+sudo apt-get update
+sudo apt-get install terraform
 ```
 ### Verify Installation
 ```bash
