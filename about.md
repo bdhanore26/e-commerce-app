@@ -327,10 +327,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 
 
----
 
-<div align="center">
-  <p>
-    Made with ❤️ by <a href="https://iemafzalhassan.tech" target="_blank"><b>Md. Afzal Hassan Ehsani</b></a>
-  </p>
-</div>
