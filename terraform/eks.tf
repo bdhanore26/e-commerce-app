@@ -1,42 +1,124 @@
-eks_managed_node_group_defaults = {
+# ==========================================
+# CREATE EKS CLUSTER
+# ==========================================
 
-  # EC2 instance type for worker nodes
-  # m7i-flex.large:
-  # - New generation Intel processor
-  # - Better performance than t2/t3
-  # - 2 vCPU
-  # - 8 GB RAM
-  # - Good for Kubernetes workloads
+module "eks" {
 
-  instance_types = ["m7i-flex.large"]
+  # Official Terraform AWS EKS module
+  source  = "terraform-aws-modules/eks/aws"
 
-  attach_cluster_primary_security_group = true
-}
+  # Module version
+  version = "19.15.1"
 
-eks_managed_node_groups = {
+  # EKS Cluster Name
+  cluster_name = local.name
 
-  tws-demo-ng = {
+  # Allow public access to Kubernetes API
+  cluster_endpoint_public_access = true
 
-    min_size     = 2
-    max_size     = 3
-    desired_size = 2
+  # ==========================================
+  # EKS ADDONS
+  # ==========================================
 
-    # Worker node EC2 type
-    instance_types = ["m7i-flex.large"]
+  cluster_addons = {
 
-    # Use Spot pricing for lower cost
-   capacity_type = "ON_DEMAND"
+    # Kubernetes DNS
+    coredns = {
+      most_recent = true
+    }
 
-    # Root EBS disk size
-    disk_size = 35
+    # Kubernetes networking
+    kube-proxy = {
+      most_recent = true
+    }
 
-    # Required for disk size to apply properly
-    use_custom_launch_template = false
-
-    tags = {
-      Name        = "tws-demo-ng"
-      Environment = "dev"
-      ExtraTag    = "e-commerce-app"
+    # AWS VPC networking plugin
+    vpc-cni = {
+      most_recent = true
     }
   }
+
+  # ==========================================
+  # VPC CONFIGURATION
+  # ==========================================
+
+  vpc_id = module.vpc.vpc_id
+
+  # Worker node subnets
+  subnet_ids = module.vpc.public_subnets
+
+  # Control plane subnets
+  control_plane_subnet_ids = module.vpc.intra_subnets
+
+  # ==========================================
+  # NODE GROUP DEFAULTS
+  # ==========================================
+
+  eks_managed_node_group_defaults = {
+
+    # EC2 type for worker nodes
+    instance_types = ["m7i-flex.large"]
+
+    # Attach cluster security group
+    attach_cluster_primary_security_group = true
+  }
+
+  # ==========================================
+  # EKS MANAGED NODE GROUP
+  # ==========================================
+
+  eks_managed_node_groups = {
+
+    tws-demo-ng = {
+
+      # Minimum worker nodes
+      min_size = 2
+
+      # Maximum worker nodes
+      max_size = 3
+
+      # Desired worker nodes
+      desired_size = 2
+
+      # EC2 machine type
+      instance_types = ["m7i-flex.large"]
+
+      # Stable On-Demand instances
+      capacity_type = "ON_DEMAND"
+
+      # Root EBS volume size
+      disk_size = 35
+
+      # Needed for disk_size to work
+      use_custom_launch_template = false
+
+      # Tags
+      tags = {
+        Name        = "tws-demo-ng"
+        Environment = "dev"
+        ExtraTag    = "e-commerce-app"
+      }
+    }
+  }
+
+  # Common tags
+  tags = local.tags
+}
+
+# ==========================================
+# FETCH RUNNING EKS NODE IPS
+# ==========================================
+
+data "aws_instances" "eks_nodes" {
+
+  instance_tags = {
+    "eks:cluster-name" = module.eks.cluster_name
+  }
+
+  filter {
+    name   = "instance-state-name"
+    values = ["running"]
+  }
+
+  depends_on = [module.eks]
 }
