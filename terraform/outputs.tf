@@ -1,120 +1,70 @@
 # ==========================================
-# OUTPUT AWS REGION
+# outputs.tf — SINGLE SOURCE OF TRUTH
 # ==========================================
-#
-# Displays the AWS region where
-# infrastructure is deployed.
-#
-# Example Output:
-# ap-south-1
+# All outputs are defined here only.
+# Removed from vpc.tf, ec2.tf, eks.tf to
+# prevent "Duplicate output" Terraform errors.
 
+# ---- Region ----
 output "region" {
-
-  # Description visible in Terraform docs/output
-  description = "The AWS region where resources are created"
-
-  # Value fetched from local variable
-  value = local.region
+  description = "AWS region where resources are created"
+  value       = local.region
 }
 
-# ==========================================
-# OUTPUT VPC ID
-# ==========================================
-#
-# Displays the VPC ID created by
-# the VPC Terraform module.
-#
-# Example:
-# vpc-0a123456789abcdef
-
+# ---- VPC ----
 output "vpc_id" {
-
   description = "The ID of the created VPC"
-
-  # Fetch VPC ID from module output
-  value = module.vpc.vpc_id
+  value       = module.vpc.vpc_id
 }
 
-# ==========================================
-# OUTPUT EKS CLUSTER NAME
-# ==========================================
-#
-# Displays Kubernetes cluster name.
-#
-# Useful for:
-# - kubectl configuration
-# - AWS CLI commands
-# - Monitoring tools
+output "public_subnets" {
+  description = "Public subnet IDs"
+  value       = module.vpc.public_subnets
+}
 
+output "private_subnets" {
+  description = "Private subnet IDs"
+  value       = module.vpc.private_subnets
+}
+
+output "intra_subnets" {
+  description = "Intra subnet IDs (EKS control plane)"
+  value       = module.vpc.intra_subnets
+}
+
+# ---- EC2 / Jenkins ----
+output "public_ip" {
+  description = "Public IP of the Jenkins EC2 instance"
+  value       = aws_instance.testinstance.public_ip
+}
+
+output "jenkins_url" {
+  description = "Jenkins UI URL"
+  value       = "http://${aws_instance.testinstance.public_ip}:8080"
+}
+
+# ---- EKS ----
 output "eks_cluster_name" {
-
   description = "EKS cluster name"
-
-  # Fetch cluster name from EKS module
-  value = module.eks.cluster_name
+  value       = module.eks.cluster_name
 }
-
-# ==========================================
-# OUTPUT EKS API ENDPOINT
-# ==========================================
-#
-# Displays Kubernetes API server endpoint.
-#
-# kubectl communicates with this endpoint.
-#
-# Example:
-# https://XXXXXXXX.gr7.ap-south-1.eks.amazonaws.com
 
 output "eks_cluster_endpoint" {
-
   description = "EKS cluster API endpoint"
-
-  value = module.eks.cluster_endpoint
+  value       = module.eks.cluster_endpoint
 }
 
-# ==========================================
-# OUTPUT EC2 PUBLIC IP
-# ==========================================
-#
-# Displays public IP of Jenkins/Automation EC2.
-#
-# Useful for:
-# - SSH access
-# - Jenkins access
-# - Browser access
-#
-# Example:
-# 13.233.xxx.xxx
-
-output "public_ip" {
-
-  description = "Public IP of the EC2 instance"
-
-  # Fetch EC2 public IP
-  value = aws_instance.testinstance.public_ip
+output "eks_cluster_version" {
+  description = "Kubernetes version running on EKS"
+  value       = module.eks.cluster_version
 }
 
-# ==========================================
-# OUTPUT EKS NODE PUBLIC IPS
-# ==========================================
-#
-# Displays public IPs of all Kubernetes worker nodes.
-#
-# Useful for:
-# - Troubleshooting
-# - SSH into worker nodes
-# - Monitoring
-#
-# Example:
-# [
-#   "13.xxx.xxx.xxx",
-#   "15.xxx.xxx.xxx"
-# ]
+output "eks_node_group_arn" {
+  description = "ARN of the EKS managed node group"
+  value       = module.eks.eks_managed_node_groups["tws-demo-ng"].node_group_arn
+}
 
 output "eks_node_group_public_ips" {
-
-  description = "Public IPs of the EKS node group instances"
-
-  # Fetch all public IPs from EKS worker nodes
-  value = data.aws_instances.eks_nodes.public_ips
+  description = "Public IPs of the EKS worker nodes"
+  value       = data.aws_instances.eks_nodes.public_ips
 }
