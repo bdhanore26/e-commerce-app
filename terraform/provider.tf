@@ -1,141 +1,68 @@
 # ==========================================
 # TERRAFORM SETTINGS
 # ==========================================
-#
-# Defines:
-# - Required providers
-# - Provider source
-# - Provider version constraints
 
 terraform {
+  # Minimum Terraform version required
+  required_version = ">= 1.5.0"
 
   required_providers {
 
-    # ==========================================
-    # AWS PROVIDER
-    # ==========================================
-    #
-    # HashiCorp AWS provider allows Terraform
-    # to communicate with AWS services.
-    #
-    # Source:
-    # Official Terraform Registry provider.
-
+    # AWS Provider
+    # ~> 5.0 = accepts 5.x, rejects 6.x
     aws = {
-
-      # Official provider source
-      source = "hashicorp/aws"
-
-      # Version constraint
-      #
-      # "~> 5.0" means:
-      # - Accept 5.x versions
-      # - Reject 6.x versions
-      #
-      # Helps avoid breaking changes.
-
+      source  = "hashicorp/aws"
       version = "~> 5.0"
     }
   }
+
+  # ==========================================
+  # REMOTE BACKEND (OPTIONAL)
+  # ==========================================
+  # Uncomment when ready to store state remotely.
+  # Needed for team collaboration.
+  #
+  # backend "s3" {
+  #   bucket = "your-terraform-state-bucket"
+  #   key    = "eks-cluster/terraform.tfstate"
+  #   region = "eu-west-1"
+  # }
 }
 
 # ==========================================
 # LOCAL VARIABLES
 # ==========================================
-#
-# Locals help avoid repeating values.
-#
-# Reusable variables inside Terraform project.
 
 locals {
 
-  # ==========================================
-  # AWS REGION
-  # ==========================================
-  #
-  # Region where infrastructure will be created.
-  #
-  # eu-west-1 = Ireland
-
+  # AWS Region — eu-west-1 (Ireland)
   region = "eu-west-1"
 
-  # ==========================================
-  # EKS CLUSTER NAME
-  # ==========================================
-  #
-  # Used for:
-  # - EKS cluster naming
-  # - Resource tagging
-  # - Identification
-
+  # EKS Cluster name
   name = "tws-eks-cluster"
 
-  # ==========================================
-  # VPC CIDR BLOCK
-  # ==========================================
-  #
-  # Main network range for VPC.
-  #
-  # 10.0.0.0/16 gives:
-  # 65,536 private IP addresses
-
+  # VPC CIDR — 65,536 IPs
   vpc_cidr = "10.0.0.0/16"
 
-  # ==========================================
-  # AVAILABILITY ZONES
-  # ==========================================
-  #
-  # Deploy infrastructure across multiple AZs
-  # for high availability.
-
+  # Availability Zones
   azs = [
     "eu-west-1a",
     "eu-west-1b"
   ]
 
-  # ==========================================
-  # PUBLIC SUBNETS
-  # ==========================================
-  #
-  # Used for:
-  # - Load balancers
-  # - Bastion hosts
-  # - Public EC2 instances
-  #
-  # Internet accessible.
-
+  # Public subnets — Load balancers, bastion, public EC2
   public_subnets = [
     "10.0.1.0/24",
     "10.0.2.0/24"
   ]
 
-  # ==========================================
-  # PRIVATE SUBNETS
-  # ==========================================
-  #
-  # Used for:
-  # - Application servers
-  # - Backend services
-  # - Databases
-  #
-  # No direct internet access.
-
+  # Private subnets — App servers, backends, databases
   private_subnets = [
     "10.0.3.0/24",
     "10.0.4.0/24"
   ]
 
-  # ==========================================
-  # INTRA SUBNETS
-  # ==========================================
-  #
-  # Used internally inside AWS.
-  #
-  # Often used for:
-  # - EKS control plane
-  # - Internal services
-  # - Internal networking
-
+  # Intra subnets — EKS control plane ENIs
   intra_subnets = [
     "10.0.5.0/24",
     "10.0.6.0/24"
@@ -144,36 +71,32 @@ locals {
   # ==========================================
   # COMMON TAGS
   # ==========================================
-  #
-  # Applied to AWS resources.
-  #
-  # Helps:
-  # - Resource identification
-  # - Billing
-  # - Automation
-  # - Monitoring
+  # Applied across all resources.
+  # Helps with billing, filtering, automation.
 
   tags = {
-
-    # Example tag
-    example = local.name
+    Project     = local.name
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+    Owner       = "your-name"     # ← update this
   }
 }
 
 # ==========================================
-# AWS PROVIDER CONFIGURATION
+# AWS PROVIDER
 # ==========================================
+# Connects Terraform to your AWS account.
 #
-# Connects Terraform to AWS account.
-#
-# Uses credentials from:
-# - aws configure
-# - environment variables
-# - IAM role
-# - shared credentials file
+# Credentials resolved from:
+#   1. Environment variables (AWS_ACCESS_KEY_ID)
+#   2. ~/.aws/credentials file (aws configure)
+#   3. IAM Role (if running on EC2/EKS)
 
 provider "aws" {
-
-  # AWS region for deployment
   region = local.region
+
+  # Optional: tag every resource by default
+  default_tags {
+    tags = local.tags
+  }
 }
