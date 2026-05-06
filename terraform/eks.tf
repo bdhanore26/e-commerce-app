@@ -1,73 +1,42 @@
-module "eks" {
+eks_managed_node_group_defaults = {
 
-  source  = "terraform-aws-modules/eks/aws"
-  version = "19.15.1"
+  # EC2 instance type for worker nodes
+  # m7i-flex.large:
+  # - New generation Intel processor
+  # - Better performance than t2/t3
+  # - 2 vCPU
+  # - 8 GB RAM
+  # - Good for Kubernetes workloads
 
-  cluster_name                   = local.name
-  cluster_endpoint_public_access = true
+  instance_types = ["m7i-flex.large"]
 
-  cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
-      most_recent = true
-    }
-  }
-
-  vpc_id                   = module.vpc.vpc_id
-  subnet_ids               = module.vpc.public_subnets
-  control_plane_subnet_ids = module.vpc.intra_subnets
-
-  # EKS Managed Node Group(s)
-
-  eks_managed_node_group_defaults = {
-
-    instance_types = ["t2.large"]
-
-    attach_cluster_primary_security_group = true
-
-  }
-
-
-  eks_managed_node_groups = {
-
-    tws-demo-ng = {
-      min_size     = 2
-      max_size     = 3
-      desired_size = 2
-
-      instance_types = ["t2.large"]
-      capacity_type  = "SPOT"
-
-      disk_size = 35 
-      use_custom_launch_template = false  # Important to apply disk size!
-
-      tags = {
-        Name = "tws-demo-ng"
-        Environment = "dev"
-        ExtraTag = "e-commerce-app"
-      }
-    }
-  }
- 
-  tags = local.tags
-
-
+  attach_cluster_primary_security_group = true
 }
 
-data "aws_instances" "eks_nodes" {
-  instance_tags = {
-    "eks:cluster-name" = module.eks.cluster_name
-  }
+eks_managed_node_groups = {
 
-  filter {
-    name   = "instance-state-name"
-    values = ["running"]
-  }
+  tws-demo-ng = {
 
-  depends_on = [module.eks]
+    min_size     = 2
+    max_size     = 3
+    desired_size = 2
+
+    # Worker node EC2 type
+    instance_types = ["m7i-flex.large"]
+
+    # Use Spot pricing for lower cost
+   capacity_type = "ON_DEMAND"
+
+    # Root EBS disk size
+    disk_size = 35
+
+    # Required for disk size to apply properly
+    use_custom_launch_template = false
+
+    tags = {
+      Name        = "tws-demo-ng"
+      Environment = "dev"
+      ExtraTag    = "e-commerce-app"
+    }
+  }
 }
