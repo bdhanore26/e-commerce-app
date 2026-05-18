@@ -1,22 +1,42 @@
 #!/bin/bash
-# FIX: Removed `set -euo pipefail` — that flag causes the entire
-# script to abort on the first non-zero exit code. On Ubuntu 24.04
-# cloud images, snap and lsb_release can return non-zero during
-# early boot, killing the rest of the installation silently.
-# We log every step to /var/log/user-data.log for easy debugging.
-
 exec > /var/log/user-data.log 2>&1
 echo "===== user-data started at $(date) ====="
 
-# ---- Wait for apt lock to be released ----
-# Ubuntu cloud images run unattended-upgrades on first boot.
-# Without this wait, apt install commands fail with "lock" errors.
-while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-  echo "Waiting for apt lock..."
+# ---- Kill unattended-upgrades FIRST ----
+systemctl stop unattended-upgrades apt-daily.service \
+  apt-daily-upgrade.service 2>/dev/null || true
+systemctl disable unattended-upgrades apt-daily.timer \
+  apt-daily-upgrade.timer 2>/dev/null || true
+
+# ---- Wait for ALL apt locks ----
+wait_apt() {
+  for lock in \
+    /var/lib/dpkg/lock-frontend \
+    /var/lib/dpkg/lock \
+    /var/lib/apt/lists/lock \
+    /var/cache/apt/archives/lock; do
+    while fuser "$lock" >/dev/null 2>&1; do
+      echo "Waiting for lock: $lock"
+      sleep 5
+    done
+  done
+}
+
+wait_apt
+
+# Kill any lingering dpkg/apt processes
+killall apt apt-get dpkg 2>/dev/null || true
+sleep 5
+
+# ---- Wait for network ----
+echo "Waiting for network..."
+until curl -s --max-time 5 https://google.com > /dev/null 2>&1; do
   sleep 5
 done
+echo "Network is up."
 
-# ---- Update system and install core packages ----
+# ---- System update ----
+wait_apt
 apt-get update -y
 apt-get install -y \
   fontconfig \
@@ -46,36 +66,41 @@ echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] \
   https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
   | tee /etc/apt/sources.list.d/trivy.list
 
-# ---- Single update after all repos are added ----
+wait_apt
 apt-get update -y
-
-# ---- Install Jenkins, Docker, Trivy ----
 apt-get install -y jenkins docker.io trivy
 
-# ---- Start and enable services ----
-systemctl enable jenkins
-systemctl start jenkins
+# ---- Services ----
+systemctl enable jenkins && systemctl start jenkins
+systemctl enable docker && systemctl restart docker
 
-systemctl enable docker
-systemctl restart docker
-
-# ---- User group permissions ----
-# FIX: $USER is empty in cloud-init context.
-# Hardcode the default Ubuntu user instead.
+# ---- Permissions ----
 usermod -aG docker ubuntu
 usermod -aG docker jenkins
 
 systemctl restart jenkins
 
-# ---- AWS CLI via Snap ----
-# FIX: snap requires snapd socket to be ready.
-# Add a short wait to avoid "cannot connect to snapd" errors.
-systemctl enable snapd
-systemctl start snapd
-sleep 10
+# ---- Snap tools with retry ----
+systemctl enable snapd && systemctl start snapd
 
-snap install aws-cli --classic
-snap install helm --classic
-snap install kubectl --classic
+snap_install() {
+  local pkg=$1; shift
+  for i in 1 2 3 4 5; do
+    snap install "$pkg" "$@" && return 0
+    echo "snap install $pkg failed (attempt $i), retrying..."
+    sleep 15
+  done
+  echo "ERROR: $pkg failed after 5 attempts"; return 1
+}
+
+# Wait for snapd socket
+until snap list >/dev/null 2>&1; do
+  echo "Waiting for snapd..."
+  sleep 10
+done
+
+snap_install aws-cli --classic
+snap_install helm --classic
+snap_install kubectl --classic
 
 echo "===== user-data finished at $(date) ====="
