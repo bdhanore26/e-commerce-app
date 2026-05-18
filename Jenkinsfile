@@ -60,14 +60,11 @@ pipeline {
                         commitMsg.startsWith("Update image tags")
                     ) {
 
-                        echo "Skipping Jenkins auto-generated commit build"
+                        echo "Skipping auto-generated Jenkins commit"
 
-                        currentBuild.description =
-                            "Skipped Jenkins-generated commit"
+                        currentBuild.result = 'ABORTED'
 
-                        currentBuild.result = 'NOT_BUILT'
-
-                        error("Stopping pipeline to prevent CI loop")
+                        return
                     }
                 }
             }
