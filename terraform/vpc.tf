@@ -1,43 +1,39 @@
 # ==========================================
 # CREATE VPC
 # ==========================================
-
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 4.0"
 
   name = local.name
   cidr = local.vpc_cidr
-
-  azs = local.azs
+  azs  = local.azs
 
   public_subnets  = local.public_subnets
   private_subnets = local.private_subnets
   intra_subnets   = local.intra_subnets
 
-  enable_nat_gateway = true
-  single_nat_gateway = true
-
+  enable_nat_gateway      = true
+  single_nat_gateway      = true
   map_public_ip_on_launch = true
 
   public_subnet_tags = {
-    "kubernetes.io/role/elb"                        = 1
-    "kubernetes.io/cluster/${local.name}"           = "shared"  
+    "kubernetes.io/role/elb"              = 1
+    "kubernetes.io/cluster/${local.name}" = "shared"  # ← ADD
   }
 
   private_subnet_tags = {
-    "kubernetes.io/role/internal-elb"               = 1
-    "kubernetes.io/cluster/${local.name}"           = "shared"  
+    "kubernetes.io/role/internal-elb"     = 1
+    "kubernetes.io/cluster/${local.name}" = "shared"  # ← ADD
   }
 
   intra_subnet_tags = {
-    "kubernetes.io/role/internal-elb"               = 1
-    "kubernetes.io/cluster/${local.name}"           = "shared"  
+    "kubernetes.io/role/internal-elb"     = 1
+    "kubernetes.io/cluster/${local.name}" = "shared"  # ← ADD
   }
 
   tags = local.tags
 }
-
 # FIX: Outputs removed from here — they are
 # consolidated in outputs.tf to avoid duplicate
 # output name conflicts across files.
