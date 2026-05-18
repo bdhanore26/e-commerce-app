@@ -28,8 +28,7 @@ pipeline {
                     ).trim()
 
                     echo "Latest commit message: ${commitMsg}"
-
-                    if (commitMsg.contains("[skip ci]")) {
+if (commitMsg.contains("[skip ci]")) {
 
     currentBuild.description =
         "Skipped Jenkins-generated commit"
@@ -37,6 +36,8 @@ pipeline {
     currentBuild.result = 'NOT_BUILT'
 
     return
+
+}
 
 }
 
