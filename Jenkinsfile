@@ -31,12 +31,14 @@ pipeline {
 
                     if (commitMsg.contains("[skip ci]")) {
 
-                        currentBuild.description =
-                            "Skipped Jenkins-generated commit"
+    currentBuild.description =
+        "Skipped Jenkins-generated commit"
 
-                        currentBuild.result = 'NOT_BUILT'
+    currentBuild.result = 'NOT_BUILT'
 
-                        return
+    return
+
+}
 
                     }
 
