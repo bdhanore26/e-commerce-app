@@ -5,46 +5,15 @@ pipeline {
     agent any
 
     environment {
+
         DOCKER_IMAGE_NAME = 'bdhanore26/easyshop-app'
         DOCKER_MIGRATION_IMAGE_NAME = 'bdhanore26/easyshop-migration'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
-
-        GITHUB_CREDENTIALS = credentials('github-credentials')
 
         GIT_BRANCH = "master"
     }
 
     stages {
-
-        stage('Prevent Build Loop') {
-
-            steps {
-
-                script {
-
-                    def commitMsg = sh(
-                        script: "git log -1 --pretty=%B",
-                        returnStdout: true
-                    ).trim()
-
-                    echo "Latest commit message: ${commitMsg}"
-
-                    if (commitMsg.contains("[skip ci]")) {
-
-                        currentBuild.description =
-                            "Skipped Jenkins-generated commit"
-
-                        currentBuild.result = 'NOT_BUILT'
-
-                        return
-
-                    }
-
-                }
-
-            }
-
-        }
 
         stage('Cleanup Workspace') {
 
@@ -55,9 +24,7 @@ pipeline {
                     clean_ws()
 
                 }
-
             }
-
         }
 
         stage('Clone Repository') {
@@ -72,9 +39,38 @@ pipeline {
                     )
 
                 }
-
             }
+        }
 
+        stage('Prevent Build Loop') {
+
+            steps {
+
+                script {
+
+                    def commitMsg = sh(
+                        script: "git log -1 --pretty=%B",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Latest commit message: ${commitMsg}"
+
+                    if (
+                        commitMsg.contains("[skip ci]") ||
+                        commitMsg.startsWith("Update image tags")
+                    ) {
+
+                        echo "Skipping Jenkins auto-generated commit build"
+
+                        currentBuild.description =
+                            "Skipped Jenkins-generated commit"
+
+                        currentBuild.result = 'NOT_BUILT'
+
+                        error("Stopping pipeline to prevent CI loop")
+                    }
+                }
+            }
         }
 
         stage('Build Docker Images') {
@@ -95,9 +91,7 @@ pipeline {
                             )
 
                         }
-
                     }
-
                 }
 
                 stage('Build Migration Image') {
@@ -114,13 +108,9 @@ pipeline {
                             )
 
                         }
-
                     }
-
                 }
-
             }
-
         }
 
         stage('Run Unit Tests') {
@@ -132,9 +122,7 @@ pipeline {
                     run_tests()
 
                 }
-
             }
-
         }
 
         stage('Security Scan with Trivy') {
@@ -146,9 +134,7 @@ pipeline {
                     trivy_scan()
 
                 }
-
             }
-
         }
 
         stage('Push Docker Images') {
@@ -168,9 +154,7 @@ pipeline {
                             )
 
                         }
-
                     }
-
                 }
 
                 stage('Push Migration Image') {
@@ -186,13 +170,9 @@ pipeline {
                             )
 
                         }
-
                     }
-
                 }
-
             }
-
         }
 
         stage('Update Kubernetes Manifests') {
@@ -210,11 +190,28 @@ pipeline {
                     )
 
                 }
-
             }
+        }
+    }
+
+    post {
+
+        success {
+
+            echo "Pipeline completed successfully"
 
         }
 
-    }
+        failure {
 
+            echo "Pipeline failed"
+
+        }
+
+        always {
+
+            cleanWs()
+
+        }
+    }
 }
