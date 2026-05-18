@@ -9,7 +9,7 @@ pipeline {
         DOCKER_MIGRATION_IMAGE_NAME = 'bdhanore26/easyshop-migration'
         DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
 
-        GITHUB_CREDENTIALS = credentials('github credentials')
+        GITHUB_CREDENTIALS = credentials('github-credentials')
 
         GIT_BRANCH = "master"
     }
@@ -204,7 +204,7 @@ pipeline {
                     update_k8s_manifests(
                         imageTag: env.DOCKER_IMAGE_TAG,
                         manifestsPath: 'kubernetes',
-                        gitCredentials: 'github credentials',
+                        gitCredentials: 'github-credentials',
                         gitUserName: 'Jenkins CI',
                         gitUserEmail: 'bdhanore26@gmail.com'
                     )
