@@ -28,18 +28,15 @@ pipeline {
                     ).trim()
 
                     echo "Latest commit message: ${commitMsg}"
-if (commitMsg.contains("[skip ci]")) {
 
-    currentBuild.description =
-        "Skipped Jenkins-generated commit"
+                    if (commitMsg.contains("[skip ci]")) {
 
-    currentBuild.result = 'NOT_BUILT'
+                        currentBuild.description =
+                            "Skipped Jenkins-generated commit"
 
-    return
+                        currentBuild.result = 'NOT_BUILT'
 
-}
-
-}
+                        return
 
                     }
 
@@ -91,15 +88,10 @@ if (commitMsg.contains("[skip ci]")) {
                         script {
 
                             docker_build(
-
                                 imageName: env.DOCKER_IMAGE_NAME,
-
                                 imageTag: env.DOCKER_IMAGE_TAG,
-
                                 dockerfile: 'Dockerfile',
-
                                 context: '.'
-
                             )
 
                         }
@@ -115,15 +107,10 @@ if (commitMsg.contains("[skip ci]")) {
                         script {
 
                             docker_build(
-
                                 imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
-
                                 imageTag: env.DOCKER_IMAGE_TAG,
-
                                 dockerfile: 'scripts/Dockerfile.migration',
-
                                 context: '.'
-
                             )
 
                         }
@@ -175,13 +162,9 @@ if (commitMsg.contains("[skip ci]")) {
                         script {
 
                             docker_push(
-
                                 imageName: env.DOCKER_IMAGE_NAME,
-
                                 imageTag: env.DOCKER_IMAGE_TAG,
-
                                 credentials: 'dockerhub-credentials'
-
                             )
 
                         }
@@ -197,13 +180,9 @@ if (commitMsg.contains("[skip ci]")) {
                         script {
 
                             docker_push(
-
                                 imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
-
                                 imageTag: env.DOCKER_IMAGE_TAG,
-
                                 credentials: 'dockerhub-credentials'
-
                             )
 
                         }
@@ -223,17 +202,11 @@ if (commitMsg.contains("[skip ci]")) {
                 script {
 
                     update_k8s_manifests(
-
                         imageTag: env.DOCKER_IMAGE_TAG,
-
                         manifestsPath: 'kubernetes',
-
                         gitCredentials: 'github credentials',
-
                         gitUserName: 'Jenkins CI',
-
                         gitUserEmail: 'bdhanore26@gmail.com'
-
                     )
 
                 }
