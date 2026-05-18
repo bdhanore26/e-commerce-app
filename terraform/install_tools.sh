@@ -4,7 +4,7 @@ exec > /var/log/user-data.log 2>&1
 echo "===== START $(date) ====="
 
 ##################################################
-# Wait for cloud-init / apt locks
+# Wait for apt/cloud-init locks
 ##################################################
 
 while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
@@ -16,14 +16,14 @@ do
 done
 
 ##################################################
-# Update system
+# Update OS
 ##################################################
 
 apt update -y
 apt upgrade -y
 
 ##################################################
-# Base packages
+# Install base packages + Java 21
 ##################################################
 
 apt install -y \
@@ -36,10 +36,12 @@ software-properties-common \
 lsb-release \
 unzip \
 fontconfig \
-openjdk-17-jre
+openjdk-21-jre
+
+java -version
 
 ##################################################
-# Install Docker (latest stable)
+# Install Docker (latest)
 ##################################################
 
 curl -fsSL https://get.docker.com | sh
@@ -50,7 +52,7 @@ systemctl start docker
 usermod -aG docker ubuntu
 
 ##################################################
-# Install Jenkins (updated key)
+# Install Jenkins (2026 method)
 ##################################################
 
 mkdir -p /etc/apt/keyrings
@@ -65,29 +67,36 @@ https://pkg.jenkins.io/debian-stable binary/" \
 apt update -y
 apt install -y jenkins
 
+##################################################
+# Force Jenkins to use Java 21
+##################################################
+
+echo 'JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' \
+>> /etc/default/jenkins || true
+
+systemctl daemon-reload
 systemctl enable jenkins
-systemctl start jenkins
+systemctl restart jenkins
 
 ##################################################
 # Install AWS CLI v2
 ##################################################
 
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
--o "awscliv2.zip"
+curl -o awscliv2.zip \
+https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
 
 unzip -q awscliv2.zip
-
 ./aws/install
 
 ##################################################
 # Install kubectl (latest stable)
 ##################################################
 
-curl -LO "https://dl.k8s.io/release/$(curl -L -s \
+curl -LO \
+"https://dl.k8s.io/release/$(curl -L -s \
 https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 
-install -o root -g root -m 0755 \
-kubectl \
+install -m 0755 kubectl \
 /usr/local/bin/kubectl
 
 ##################################################
@@ -115,30 +124,30 @@ systemctl restart docker
 systemctl restart jenkins
 
 ##################################################
-# Verification
+# Verify everything
 ##################################################
 
 echo "===== VERIFY ====="
 
-echo "Docker:"
-docker --version
-
-echo "Java:"
+echo "JAVA"
 java -version
 
-echo "AWS:"
+echo "DOCKER"
+docker --version
+
+echo "AWS"
 aws --version
 
-echo "kubectl:"
+echo "KUBECTL"
 kubectl version --client
 
-echo "Helm:"
+echo "HELM"
 helm version
 
-echo "Trivy:"
+echo "TRIVY"
 trivy --version
 
-echo "Jenkins:"
+echo "JENKINS"
 systemctl status jenkins --no-pager
 
-echo "===== COMPLETE $(date) ====="
+echo "===== COMPLETE ====="
