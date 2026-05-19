@@ -18,13 +18,16 @@ pipeline {
         stage('Cleanup Workspace') {
 
             steps {
+
                 script {
+
                     clean_ws()
+
                 }
+
             }
 
         }
-
 
         stage('Clone Repository') {
 
@@ -43,7 +46,6 @@ pipeline {
 
         }
 
-
         stage('Prevent Build Loop') {
 
             steps {
@@ -55,7 +57,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "Latest commit: ${commitMsg}"
+                    echo "Latest commit message: ${commitMsg}"
 
                     if (
                         commitMsg.contains("[skip ci]") ||
@@ -64,9 +66,7 @@ pipeline {
 
                         currentBuild.result = 'NOT_BUILT'
 
-                        error(
-                            "Stopping self-triggered Jenkins build"
-                        )
+                        error("Stopping self-triggered build")
 
                     }
 
@@ -76,12 +76,11 @@ pipeline {
 
         }
 
-
         stage('Build Docker Images') {
 
             parallel {
 
-                stage('Build Main') {
+                stage('Build Main App Image') {
 
                     steps {
 
@@ -100,23 +99,16 @@ pipeline {
 
                 }
 
-
-                stage('Build Migration') {
+                stage('Build Migration Image') {
 
                     steps {
 
                         script {
 
                             docker_build(
-                                imageName:
-                                env.DOCKER_MIGRATION_IMAGE_NAME,
-
-                                imageTag:
-                                env.DOCKER_IMAGE_TAG,
-
-                                dockerfile:
-                                'scripts/Dockerfile.migration',
-
+                                imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
+                                imageTag: env.DOCKER_IMAGE_TAG,
+                                dockerfile: 'scripts/Dockerfile.migration',
                                 context: '.'
                             )
 
@@ -130,8 +122,7 @@ pipeline {
 
         }
 
-
-        stage('Run Tests') {
+        stage('Run Unit Tests') {
 
             steps {
 
@@ -145,8 +136,7 @@ pipeline {
 
         }
 
-
-        stage('Trivy Scan') {
+        stage('Security Scan with Trivy') {
 
             steps {
 
@@ -160,26 +150,20 @@ pipeline {
 
         }
 
-
-        stage('Push Images') {
+        stage('Push Docker Images') {
 
             parallel {
 
-                stage('Push Main') {
+                stage('Push Main App Image') {
 
                     steps {
 
                         script {
 
                             docker_push(
-                                imageName:
-                                env.DOCKER_IMAGE_NAME,
-
-                                imageTag:
-                                env.DOCKER_IMAGE_TAG,
-
-                                credentials:
-                                'dockerhub-credentials'
+                                imageName: env.DOCKER_IMAGE_NAME,
+                                imageTag: env.DOCKER_IMAGE_TAG,
+                                credentials: 'dockerhub-credentials'
                             )
 
                         }
@@ -188,22 +172,16 @@ pipeline {
 
                 }
 
-
-                stage('Push Migration') {
+                stage('Push Migration Image') {
 
                     steps {
 
                         script {
 
                             docker_push(
-                                imageName:
-                                env.DOCKER_MIGRATION_IMAGE_NAME,
-
-                                imageTag:
-                                env.DOCKER_IMAGE_TAG,
-
-                                credentials:
-                                'dockerhub-credentials'
+                                imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
+                                imageTag: env.DOCKER_IMAGE_TAG,
+                                credentials: 'dockerhub-credentials'
                             )
 
                         }
@@ -216,30 +194,18 @@ pipeline {
 
         }
 
-
-        stage('Update Kubernetes') {
+        stage('Update Kubernetes Manifests') {
 
             steps {
 
                 script {
 
                     update_k8s_manifests(
-
-                        imageTag:
-                        env.DOCKER_IMAGE_TAG,
-
-                        manifestsPath:
-                        'kubernetes',
-
-                        gitCredentials:
-                        'github-credentials',
-
-                        gitUserName:
-                        'Jenkins CI',
-
-                        gitUserEmail:
-                        'bdhanore26@gmail.com'
-
+                        imageTag: env.DOCKER_IMAGE_TAG,
+                        manifestsPath: 'kubernetes',
+                        gitCredentials: 'github-credentials',
+                        gitUserName: 'Jenkins CI',
+                        gitUserEmail: 'bdhanore26@gmail.com'
                     )
 
                 }
@@ -250,18 +216,17 @@ pipeline {
 
     }
 
-
     post {
 
         success {
 
-            echo "SUCCESS"
+            echo "Pipeline completed successfully"
 
         }
 
         failure {
 
-            echo "FAILED"
+            echo "Pipeline failed"
 
         }
 
