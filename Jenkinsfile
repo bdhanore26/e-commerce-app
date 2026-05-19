@@ -18,14 +18,13 @@ pipeline {
         stage('Cleanup Workspace') {
 
             steps {
-
                 script {
-
                     clean_ws()
-
                 }
             }
+
         }
+
 
         stage('Clone Repository') {
 
@@ -35,12 +34,15 @@ pipeline {
 
                     clone(
                         "https://github.com/bdhanore26/e-commerce-app.git",
-                        "master"
+                        env.GIT_BRANCH
                     )
 
                 }
+
             }
+
         }
+
 
         stage('Prevent Build Loop') {
 
@@ -53,28 +55,33 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "Latest commit message: ${commitMsg}"
+                    echo "Latest commit: ${commitMsg}"
 
                     if (
                         commitMsg.contains("[skip ci]") ||
                         commitMsg.startsWith("Update image tags")
                     ) {
 
-                        echo "Skipping auto-generated Jenkins commit"
+                        currentBuild.result = 'NOT_BUILT'
 
-                        currentBuild.result = 'ABORTED'
+                        error(
+                            "Stopping self-triggered Jenkins build"
+                        )
 
-                        return
                     }
+
                 }
+
             }
+
         }
+
 
         stage('Build Docker Images') {
 
             parallel {
 
-                stage('Build Main App Image') {
+                stage('Build Main') {
 
                     steps {
 
@@ -88,29 +95,43 @@ pipeline {
                             )
 
                         }
+
                     }
+
                 }
 
-                stage('Build Migration Image') {
+
+                stage('Build Migration') {
 
                     steps {
 
                         script {
 
                             docker_build(
-                                imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                dockerfile: 'scripts/Dockerfile.migration',
+                                imageName:
+                                env.DOCKER_MIGRATION_IMAGE_NAME,
+
+                                imageTag:
+                                env.DOCKER_IMAGE_TAG,
+
+                                dockerfile:
+                                'scripts/Dockerfile.migration',
+
                                 context: '.'
                             )
 
                         }
+
                     }
+
                 }
+
             }
+
         }
 
-        stage('Run Unit Tests') {
+
+        stage('Run Tests') {
 
             steps {
 
@@ -119,10 +140,13 @@ pipeline {
                     run_tests()
 
                 }
+
             }
+
         }
 
-        stage('Security Scan with Trivy') {
+
+        stage('Trivy Scan') {
 
             steps {
 
@@ -131,77 +155,113 @@ pipeline {
                     trivy_scan()
 
                 }
+
             }
+
         }
 
-        stage('Push Docker Images') {
+
+        stage('Push Images') {
 
             parallel {
 
-                stage('Push Main App Image') {
+                stage('Push Main') {
 
                     steps {
 
                         script {
 
                             docker_push(
-                                imageName: env.DOCKER_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                credentials: 'dockerhub-credentials'
+                                imageName:
+                                env.DOCKER_IMAGE_NAME,
+
+                                imageTag:
+                                env.DOCKER_IMAGE_TAG,
+
+                                credentials:
+                                'dockerhub-credentials'
                             )
 
                         }
+
                     }
+
                 }
 
-                stage('Push Migration Image') {
+
+                stage('Push Migration') {
 
                     steps {
 
                         script {
 
                             docker_push(
-                                imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                credentials: 'dockerhub-credentials'
+                                imageName:
+                                env.DOCKER_MIGRATION_IMAGE_NAME,
+
+                                imageTag:
+                                env.DOCKER_IMAGE_TAG,
+
+                                credentials:
+                                'dockerhub-credentials'
                             )
 
                         }
+
                     }
+
                 }
+
             }
+
         }
 
-        stage('Update Kubernetes Manifests') {
+
+        stage('Update Kubernetes') {
 
             steps {
 
                 script {
 
                     update_k8s_manifests(
-                        imageTag: env.DOCKER_IMAGE_TAG,
-                        manifestsPath: 'kubernetes',
-                        gitCredentials: 'github-credentials',
-                        gitUserName: 'Jenkins CI',
-                        gitUserEmail: 'bdhanore26@gmail.com'
+
+                        imageTag:
+                        env.DOCKER_IMAGE_TAG,
+
+                        manifestsPath:
+                        'kubernetes',
+
+                        gitCredentials:
+                        'github-credentials',
+
+                        gitUserName:
+                        'Jenkins CI',
+
+                        gitUserEmail:
+                        'bdhanore26@gmail.com'
+
                     )
 
                 }
+
             }
+
         }
+
     }
+
 
     post {
 
         success {
 
-            echo "Pipeline completed successfully"
+            echo "SUCCESS"
 
         }
 
         failure {
 
-            echo "Pipeline failed"
+            echo "FAILED"
 
         }
 
@@ -210,5 +270,7 @@ pipeline {
             cleanWs()
 
         }
+
     }
+
 }
